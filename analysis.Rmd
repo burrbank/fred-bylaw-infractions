@@ -1,0 +1,37 @@
+---
+title: "Fredericton Open Data Prep"
+author: "Ryan Porter"
+date: "September 27, 2017"
+output: html_document
+knit: (function(inputFile, encoding) { 
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), 'index.html')) })
+---
+
+First get the data fresh from the site
+
+```{r}
+if(!file.exists('bylaw.csv')){
+  download.file('http://data.fredericton.ca/sites/default/files/by-law.csv', 'bylaw.csv')
+  
+}
+curr_date <- date() 
+bylaw <- read.csv('bylaw.csv', na.strings = c("NA", "NULL"))
+
+```
+This data was collected at `r curr_date`.
+
+I think what I want to know is what kind of infraction is most common in which ward. A map of the wards is available [http://www.fredericton.ca/sites/default/files/pdf/2016may11wardmap.pdf](here). The first step will be cleaning the data a little bit. I will likely ask a couple other questions of the data later on.
+
+```{r, fig.align = "left", fig.height = 8, fig.width = 15}
+has_ward <- !is.na(bylaw$Ward)
+bylaw.ward <- bylaw[has_ward,]
+
+options(warn = -1)
+suppressMessages(library(plotly))
+p = plot_ly(x=bylaw.ward$Ward, type = "histogram", color=bylaw.ward$ComplaintCategory)
+plotlink = layout(p, margin = 0)
+plotlink
+
+```
