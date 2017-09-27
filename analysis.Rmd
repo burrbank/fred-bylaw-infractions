@@ -22,7 +22,7 @@ bylaw <- read.csv('bylaw.csv', na.strings = c("NA", "NULL"))
 ```
 This data was collected at `r curr_date`.
 
-I think what I want to know is what kind of infraction is most common in which ward. A map of the wards is available [http://www.fredericton.ca/sites/default/files/pdf/2016may11wardmap.pdf](here). The first step will be cleaning the data a little bit. I will likely ask a couple other questions of the data later on.
+I think what I want to know is what kind of infraction is most common in which ward. A map of the wards is available [here](http://www.fredericton.ca/sites/default/files/pdf/2016may11wardmap.pdf). The first step will be cleaning the data a little bit. I will likely ask a couple other questions of the data later on.
 
 ```{r, fig.align = "left", fig.height = 8, fig.width = 15}
 has_ward <- !is.na(bylaw$Ward)
