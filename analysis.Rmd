@@ -35,3 +35,22 @@ plotlink = layout(p, margin = 0)
 plotlink
 
 ```
+
+After attending the Open Data Atlantic fall session I've had some time to think about the data set and I have became more curious about the multi-entry reports (ie reports that share the same id). I am interested to find out if there is any additional information to find out from these entries. This will require data about each CaseID as there are a fair ammount of duplicates within the set (which I think I failed to take into account earlier).
+
+```{r}
+library(foreach)
+
+get_CaseID_Data <- function(data, ID){
+  tmp <- subset(data, CaseID == as.character(ID))
+  num_entries <- nrow(tmp)
+  dates <-tmp$SubDate
+  ward <- tmp$Ward
+  catagory <- tmp$ComplaintCategory
+  return(list(ID, num_entries, dates, ward, catagory))
+}
+
+
+CaseID.data <- foreach(id=levels(bylaw$CaseID)) %do% get_CaseID_Data(bylaw, id)
+
+```
