@@ -12,15 +12,16 @@ knit: (function(inputFile, encoding) {
 First get the data fresh from the site
 
 ```{r}
+library(dplyr)
 if(!file.exists('bylaw.csv')){
   download.file('http://data.fredericton.ca/sites/default/files/by-law.csv', 'bylaw.csv')
   
 }
 curr_date <- date() 
 bylaw <- read.csv('bylaw.csv', na.strings = c("NA", "NULL"))
-
+bylaw <- mutate(bylaw, SubDate = as.Date(SubDate))
 ```
-This data was collected at `r curr_date`.
+This analysis was last knit on `r curr_date`.
 
 I think what I want to know is what kind of infraction is most common in which ward. A map of the wards is available [here](http://www.fredericton.ca/sites/default/files/pdf/2016may11wardmap.pdf). The first step will be cleaning the data a little bit. I will likely ask a couple other questions of the data later on.
 
@@ -38,19 +39,63 @@ plotlink
 
 After attending the Open Data Atlantic fall session I've had some time to think about the data set and I have became more curious about the multi-entry reports (ie reports that share the same id). I am interested to find out if there is any additional information to find out from these entries. This will require data about each CaseID as there are a fair ammount of duplicates within the set (which I think I failed to take into account earlier).
 
-```{r}
+```{r, fig.width = 15}
 library(foreach)
+library(jsonlite)
+library(dplyr)
 
 get_CaseID_Data <- function(data, ID){
+  # for use in a foreach loop.
+  # gets data for rows matching ID in in the data (tailored for fred bylaw data)
+  # ward and catagory only grab the value of the first entry though this is based on an asumtion on my part.
+  
   tmp <- subset(data, CaseID == as.character(ID))
   num_entries <- nrow(tmp)
   dates <-tmp$SubDate
-  ward <- tmp$Ward
-  catagory <- tmp$ComplaintCategory
-  return(list(ID, num_entries, dates, ward, catagory))
+  ward <- tmp$Ward[1]
+  catagory <- tmp$ComplaintCategory[1]
+  
+  return(list(ID=ID,
+              num_entries=num_entries,
+              date=dates,
+              ward=as.character(ward), 
+              type=as.character(catagory)
+              ))
 }
 
+# collect data using above function and combine into a data.frame object
+CaseID.data <- data.frame(foreach(id=levels(bylaw$CaseID), .combine = rbind ) %do% get_CaseID_Data(bylaw, id)) %>%
+  mutate(ID = unlist(ID), num_entries=unlist(num_entries), ward=unlist(ward), type=unlist(type)) 
 
-CaseID.data <- foreach(id=levels(bylaw$CaseID)) %do% get_CaseID_Data(bylaw, id)
+CaseID.data.json <- toJSON(CaseID.data, pretty = TRUE)
+write(CaseID.data.json, file='byCaseID.json')
+```
+With that data gathered I can now look at posts by CaseID in the new dataframe. I have stored it as a JSON file because of the rows with multiple date values would not be compatible with csv. Next I want to see which types of reports have multiple values and which wards are inflated on the previous graph because of multiple reports.
+
+```{r, fig.width = 14}
+
+options(warn = -1)
+suppressMessages(library(plotly))
+
+font = list(
+  family = "Courier New, monospace",
+  size = 18,
+  color = "#7f7f7f"
+)
+ylab = list(
+  title = "number of unique IDs",
+  titlefont = font
+)
+xlab = list(
+  title = "number of posts per ID"
+)
+
+with(CaseID.data, plot_ly(x=num_entries, type = "histogram", color=type)) %>% 
+  layout(xaxis = xlab, yaxis=ylab)
+
+with(CaseID.data, plot_ly(x=num_entries, type = "histogram", color=ward)) %>%
+  layout(xaxis = xlab, yaxis=ylab)
 
 ```
+
+Looking at these charts it doesnt look like the number of posts in a ward should really throw the proportions off by all that much (each ward seems to have a similar proportion of multi entry IDs aside from ward 1). I may do further analysis on this later. 
